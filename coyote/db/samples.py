@@ -43,12 +43,22 @@ class SampleHandler:
         """
         reset sample to default settings
         """
+        sample = self.get_sample(sample_id)
+        from coyote.blueprints.variants import util
+
+        genelist_filter = sample.get("checked_genelists", settings.get("default_checked_genelists", {}))
+        genelist_names = [name.split("_", 1)[1] for name in genelist_filter.keys()]
+        assay = util.get_assay_from_sample(sample)
+        material = sample.get("material")
+        vaf_default = util.default_vaf_threshold(assay=assay, material=material, genelists=genelist_names)
+        min_freq = vaf_default if vaf_default is not None else settings["default_min_freq"]
+
         self.samples_collection.update(
             {"name": sample_id},
             {
                 "$set": {
                     "filter_max_freq": settings["default_max_freq"],
-                    "filter_min_freq": settings["default_min_freq"],
+                    "filter_min_freq": min_freq,
                     "filter_min_depth": settings["default_mindepth"],
                     "filter_min_reads": settings["default_min_reads"],
                     "filter_min_spanreads": settings["default_spanreads"],
@@ -91,12 +101,23 @@ class SampleHandler:
                 else:
                     checked_conseq[fieldname] = 1
 
+        sample = self.get_sample(sample_str)
+        from coyote.blueprints.variants import util
+
+        genelist_names = [name.split("_", 1)[1] for name in checked_genelists.keys()]
+        assay = util.get_assay_from_sample(sample)
+        material = sample.get("material")
+        vaf_default = util.default_vaf_threshold(assay=assay, material=material, genelists=genelist_names)
+        min_freq = form.min_freq.data
+        if vaf_default is not None:
+            min_freq = vaf_default
+
         self.samples_collection.update(
             {"name": sample_str},
             {
                 "$set": {
                     "filter_max_freq": form.max_freq.data,
-                    "filter_min_freq": form.min_freq.data,
+                    "filter_min_freq": min_freq,
                     "filter_min_depth": form.min_depth.data,
                     "filter_min_reads": form.min_reads.data,
                     "filter_min_spanreads": form.min_spanreads.data,

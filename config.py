@@ -67,6 +67,19 @@ class DefaultConfig:
         "default_checked_fusioncallers": [],
         "default_checked_cnveffects": [],
     }
+
+    VAF_POLICY = {
+        "fallback": 0.05,
+        "assays": {
+            "GMS-HEM": {
+                "fresh frozen": 0.02,
+                "FFPE": 0.03,
+            }
+        },
+        "genelists": {
+            "MPN": 0.01,
+        },
+    }
     TRANS = {
         "nonsynonymous_SNV": "missense SNV",
         "stopgain": "stop gain",

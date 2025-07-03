@@ -1,3 +1,8 @@
 ## Coyote
 
 ### COOL
+
+### VAF policy
+
+Default VAF thresholds can now be customised based on assay, sample material or
+applied genelist. See `VAF_POLICY` in `config.py` for examples.

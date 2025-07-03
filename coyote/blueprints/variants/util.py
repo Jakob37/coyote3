@@ -2,6 +2,30 @@ from flask import current_app as app
 from collections import defaultdict
 import re
 
+
+def default_vaf_threshold(assay=None, material=None, genelists=None):
+    """Return VAF threshold from policy if defined."""
+    policy = app.config.get("VAF_POLICY", {})
+    genelists = genelists or []
+
+    # Genelist rules take highest precedence
+    for gl in genelists:
+        thr = policy.get("genelists", {}).get(gl)
+        if thr is not None:
+            return thr
+
+    # Assay/material rules
+    if assay:
+        assay_rules = policy.get("assays", {}).get(assay)
+        if isinstance(assay_rules, dict):
+            if material and material in assay_rules:
+                return assay_rules[material]
+            if "default" in assay_rules:
+                return assay_rules["default"]
+
+    # Fallback
+    return policy.get("fallback")
+
 def get_group_defaults(group):
     """
     Return Default dict (either group defaults or coyote defaults) and setting per sample
@@ -28,7 +52,22 @@ def get_sample_settings(sample,settings):
     get sample settings or use default
     """
     sample_settings = {}
-    sample_settings["min_freq"]            = float(sample.get("filter_min_freq", settings["default_min_freq"]))
+    genelist_filter = sample.get("checked_genelists", settings.get("default_checked_genelists", {}))
+    genelist_names = [name.split("_", 1)[1] for name, val in genelist_filter.items() if val]
+    assay = get_assay_from_sample(sample)
+    material = sample.get("material")
+    vaf_default = default_vaf_threshold(assay=assay, material=material, genelists=genelist_names)
+
+    stored_min_freq = sample.get("filter_min_freq")
+    if stored_min_freq is None:
+        min_freq = settings["default_min_freq"]
+    else:
+        min_freq = float(stored_min_freq)
+
+    if (stored_min_freq is None or float(stored_min_freq) == float(settings["default_min_freq"])) and vaf_default is not None:
+        min_freq = float(vaf_default)
+
+    sample_settings["min_freq"] = min_freq
     sample_settings["min_reads"]           = int(float(sample.get("filter_min_reads", settings["default_min_reads"])))
     sample_settings["max_freq"]            = float(sample.get("filter_max_freq", settings["default_max_freq"]))
     sample_settings["min_depth"]           = int(float(sample.get("filter_min_depth", settings["default_mindepth"])))
